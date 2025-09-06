@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>เครื่องสร้างใบเสนอราคาขายส่ง v4.1.0</title>
+    <title>เครื่องสร้างใบเสนอราคาขายส่ง v4.2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,7 +36,7 @@
     <header class="mb-6 flex justify-between items-start">
         <div>
             <h1 class="text-3xl font-bold text-slate-800">เครื่องสร้างใบเสนอราคาขายส่ง</h1>
-            <p class="text-sm text-slate-500 mt-1">Version: 4.1.0 (Layout Update)</p>
+            <p class="text-sm text-slate-500 mt-1">Version: 4.2.0 (Deployment Fix)</p>
         </div>
         <div class="flex items-center gap-4">
              <div id="auth-status" class="text-xs text-right text-slate-400">
@@ -815,9 +815,26 @@
     /* ===== FIREBASE INTEGRATION (NEW) ===== */
     async function initFirebase() {
         appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id-ws-quote';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AI...", authDomain: "...", projectId: "..." };
+
+        // --- START: CONFIG FOR GITHUB DEPLOYMENT ---
+        // For deployment on GitHub Pages, the __firebase_config variable will not exist.
+        // You must replace the placeholder values below with your ACTUAL Firebase project configuration.
+        // You can find this in your Firebase project settings.
+        const firebaseConfig = {
+          apiKey: "AIzaSyALTTyFlMIONAENrHWHUvdajFdXZ4gifKw", // <-- ใส่ค่าจริงที่นี่
+          authDomain: "quote-generator-d84d9.firebaseapp.com", // <-- ใส่ค่าจริงที่นี่
+          projectId: "quote-generator-d84d9", // <-- ใส่ค่าจริงที่นี่
+          storageBucket: "quote-generator-d84d9.firebasestorage.app", // <-- ใส่ค่าจริงที่นี่
+          messagingSenderId: "264408396056", // <-- ใส่ค่าจริงที่นี่
+          appId: "1:264408396056:web:836ab99500bf18c6306e6d" // <-- ใส่ค่าจริงที่นี่
+        };
+
+        // This logic checks if it's running in the dev environment (with __firebase_config)
+        // or on the live deployed site (using the config above).
+        const finalConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
+        // --- END: CONFIG FOR GITHUB DEPLOYMENT ---
         
-        app = initializeApp(firebaseConfig);
+        app = initializeApp(finalConfig);
         db = getFirestore(app);
         auth = getAuth(app);
 
