@@ -54,7 +54,15 @@
         </div>
     </header>
 
-    <div class="space-y-6">
+    <div id="loginPromptContainer" class="text-center py-20 bg-white rounded-lg shadow-md hidden">
+        <h2 class="text-2xl font-bold text-slate-800">กรุณาเข้าสู่ระบบ</h2>
+        <p class="text-slate-500 mt-2">คุณต้องเข้าสู่ระบบเพื่อใช้งานเครื่องมือสร้างใบเสนอราคา</p>
+        <button id="promptLoginBtn" class="mt-6 px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 shadow-sm">
+            เข้าสู่ระบบ / สมัครสมาชิก
+        </button>
+    </div>
+
+    <div id="mainAppContainer" class="space-y-6 hidden">
         <div id="quotationCard" class="bg-white p-5 rounded-lg shadow-md">
              <h2 class="text-base font-bold text-slate-700 border-b pb-3 mb-4">ใบเสนอราคา</h2>
              
@@ -176,7 +184,7 @@
     // Firebase Imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
     /* ===== CONFIG / STATE ===== */
     const INV_KEY = 'inventoryDataV1';
@@ -922,6 +930,8 @@
             const saveBtn = document.getElementById('saveQuoteBtn');
             const loginBtn = document.getElementById('loginBtn');
             const userInfoDiv = document.getElementById('user-info');
+            const mainAppContainer = document.getElementById('mainAppContainer');
+            const loginPromptContainer = document.getElementById('loginPromptContainer');
             
             if (user) {
                 // User is signed in
@@ -929,6 +939,10 @@
                 document.getElementById('userEmailDisplay').textContent = user.email;
                 saveBtn.disabled = false;
                 
+                // Show main app, hide login prompt
+                mainAppContainer.classList.remove('hidden');
+                loginPromptContainer.classList.add('hidden');
+
                 loginBtn.classList.add('hidden');
                 userInfoDiv.classList.remove('hidden');
                 userInfoDiv.classList.add('flex');
@@ -939,6 +953,10 @@
                 userId = null;
                 document.getElementById('userEmailDisplay').textContent = '';
                 saveBtn.disabled = true;
+                
+                // Hide main app, show login prompt
+                mainAppContainer.classList.add('hidden');
+                loginPromptContainer.classList.remove('hidden');
 
                 loginBtn.classList.remove('hidden');
                 userInfoDiv.classList.add('hidden');
@@ -978,7 +996,7 @@
         };
 
         try {
-            const collectionPath = `artifacts/${appId}/public/data/quotations`;
+            const collectionPath = `users/${userId}/quotations`;
             if (currentQuoteId) {
                 const docRef = doc(db, collectionPath, currentQuoteId);
                 await setDoc(docRef, {...quoteData, updatedAt: serverTimestamp()}, { merge: true });
@@ -1050,10 +1068,10 @@
     }
 
     function listenForHistory() {
-        if (!db || !appId || !userId) return;
+        if (!db || !userId) return;
         const historyList = document.getElementById('historyList');
-        const collectionPath = `artifacts/${appId}/public/data/quotations`;
-        const q = query(collection(db, collectionPath), where("createdBy", "==", userId), orderBy("createdAt", "desc"));
+        const collectionPath = `users/${userId}/quotations`;
+        const q = query(collection(db, collectionPath), orderBy("createdAt", "desc"));
 
         onSnapshot(q, (querySnapshot) => {
             allHistoryQuotes = [];
@@ -1068,9 +1086,9 @@
     }
 
     async function loadQuote(quoteId) {
-        if (!db || !appId) return;
+        if (!db || !userId) return;
         try {
-            const collectionPath = `artifacts/${appId}/public/data/quotations`;
+            const collectionPath = `users/${userId}/quotations`;
             const docRef = doc(db, collectionPath, quoteId);
             const docSnap = await getDoc(docRef);
 
@@ -1172,8 +1190,11 @@
         document.getElementById('includeVatToggle').addEventListener('change', renderQuoteTable);
         document.getElementById('settingsBtn').addEventListener('click', showSettingsModal);
         document.getElementById('historySearch').addEventListener('input', renderHistoryList);
+        
+        // Auth buttons
         document.getElementById('loginBtn').addEventListener('click', showLoginModal);
         document.getElementById('logoutBtn').addEventListener('click', handleSignOut);
+        document.getElementById('promptLoginBtn').addEventListener('click', showLoginModal);
     }
     
     function initApp() { 
