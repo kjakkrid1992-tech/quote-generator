@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>เครื่องสร้างใบเสนอราคาขายส่ง v4.3.0</title>
+    <title>เครื่องสร้างใบเสนอราคา v5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Sarabun', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         .spinner{ width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:spin .6s linear infinite }
@@ -36,7 +39,7 @@
     <header class="mb-6 flex justify-between items-start">
         <div>
             <h1 class="text-3xl font-bold text-slate-800">เครื่องสร้างใบเสนอราคาขายส่ง</h1>
-            <p class="text-sm text-slate-500 mt-1">Version: 4.3.0 (History Search)</p>
+            <p class="text-sm text-slate-500 mt-1">Version: 5.0 (UX & PDF Update)</p>
         </div>
         <div class="flex items-center gap-4">
              <div id="auth-container">
@@ -70,7 +73,12 @@
              <h2 class="text-base font-bold text-slate-700 border-b pb-3 mb-4">ใบเสนอราคา</h2>
              
             <div class="mb-4 border-b pb-4">
-                <h3 class="text-sm font-semibold text-slate-600 mb-2">ข้อมูลลูกค้า</h3>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-sm font-semibold text-slate-600">ข้อมูลลูกค้า</h3>
+                    <button id="selectCustomerBtn" class="text-xs inline-flex items-center px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md">
+                        <i data-lucide="users" class="w-3 h-3 mr-1"></i> เลือกลูกค้า
+                    </button>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="customerName" class="block text-xs font-medium text-slate-500">ชื่อลูกค้า/บริษัท</label>
@@ -84,6 +92,12 @@
                         <label for="customerAddress" class="block text-xs font-medium text-slate-500">ที่อยู่</label>
                         <textarea id="customerAddress" rows="2" class="mt-1 w-full px-3 py-1.5 border border-slate-300 rounded-md shadow-sm text-sm" placeholder="ระบุที่อยู่"></textarea>
                     </div>
+                    <div class="sm:col-span-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="saveCustomerInfo" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="saveCustomerInfo" class="ml-2 block text-xs text-slate-600">บันทึก / อัปเดตข้อมูลลูกค้าคนนี้</label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -92,7 +106,7 @@
                      <thead class="bg-slate-50">
                          <tr>
                              <th class="px-2 py-2 font-medium text-slate-500 uppercase tracking-wider text-left" style="width: 35%;">สินค้า</th>
-                             <th class="px-2 py-2 font-medium text-slate-500 uppercase tracking-wider text-center" style="width: 10%;">ส่ง/ปลีก</th>
+                             <th class="px-2 py-2 font-medium text-slate-500 uppercase tracking-wider text-center" style="width: 15%;">ส่ง/ปลีก</th>
                              <th class="px-2 py-2 font-medium text-slate-500 uppercase tracking-wider text-center" style="width: 10%;">จำนวน</th>
                              <th class="px-2 py-2 font-medium text-slate-500 uppercase tracking-wider text-right" style="width: 12%;">ราคา/หน่วย</th>
                              <th class="px-2 py-2 font-medium text-slate-500 uppercase tracking-wider text-right" style="width: 10%;">ส่วนลด/หน่วย</th>
@@ -134,6 +148,9 @@
                      <button id="saveQuoteBtn" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-sm text-white hover:bg-indigo-700 disabled:bg-slate-400" disabled>
                         <i data-lucide="save" class="w-4 h-4 mr-2"></i>บันทึก
                     </button>
+                    <button id="generatePdfBtn" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-sm text-white hover:bg-red-700">
+                        <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>สร้าง PDF
+                    </button>
                     <button id="printQuoteBtn" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-sm text-white hover:bg-blue-700">
                         <i data-lucide="printer" class="w-4 h-4 mr-2"></i>พิมพ์
                     </button>
@@ -168,7 +185,26 @@
                 <input type="text" id="historySearch" class="px-3 py-1.5 border border-slate-300 rounded-md shadow-sm text-sm" placeholder="ค้นหาสินค้าในประวัติ...">
             </div>
             <div id="historyList" class="space-y-3 max-h-[60vh] overflow-y-auto">
-                <div class="text-center text-slate-400 py-8">...</div>
+                 <div id="historySkeleton" class="space-y-3">
+                    <div class="p-3 border rounded-md bg-white animate-pulse">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="h-4 bg-slate-200 rounded w-32 mb-2"></div>
+                                <div class="h-3 bg-slate-200 rounded w-24"></div>
+                            </div>
+                            <div class="h-5 bg-slate-200 rounded w-20"></div>
+                        </div>
+                    </div>
+                    <div class="p-3 border rounded-md bg-white animate-pulse">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="h-4 bg-slate-200 rounded w-40 mb-2"></div>
+                                <div class="h-3 bg-slate-200 rounded w-20"></div>
+                            </div>
+                            <div class="h-5 bg-slate-200 rounded w-24"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -176,7 +212,7 @@
 
 <!-- MODAL & Autocomplete Portal -->
 <div id="appModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
+    <div id="modalContent" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600">
         <i data-lucide="x" class="w-6 h-6"></i>
       </button>
@@ -185,11 +221,12 @@
 </div>
 <div id="acPortal" class="ac-portal"></div>
 
+
 <script type="module">
     // Firebase Imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, doc, setDoc, deleteDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
     /* ===== CONFIG / STATE ===== */
     const INV_KEY = 'inventoryDataV1';
@@ -208,6 +245,8 @@
     let currentQuoteId = null;
     let companyInfo = {};
     let allHistoryQuotes = [];
+    let allCustomers = [];
+    let selectedCustomerId = null;
 
     // Firebase state
     let app, db, auth, userId;
@@ -215,12 +254,12 @@
     /* ===== UTILITIES ===== */
     function n2(num, fix = 2) { if (isNaN(num) || num === null || num === undefined || num === '' || num === '-') return '-'; return (+num).toLocaleString('th-TH', { minimumFractionDigits: fix, maximumFractionDigits: fix }); }
     const escapeReg = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    function formatIntegerInput(inp) { let val = inp.value.replace(/[^0-9]/g, ''); val = val.replace(/^0+(\d)/, '$1'); inp.value = val ? (+val).toLocaleString('th-TH') : ''; }
 
     /* ===== MODAL ===== */
     window.closeModal = function() { document.getElementById('appModal').classList.add('hidden'); }
     
     function showInfoModal(title, message, onOk) {
+        document.getElementById('modalContent').className = 'bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto';
         const modalBody = document.getElementById('modalBody');
         modalBody.innerHTML = `
             <div class="text-center">
@@ -246,6 +285,7 @@
     }
     
     function showConfirmationModal(title, message, onConfirm, onCancel) {
+        document.getElementById('modalContent').className = 'bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto';
         const modalBody = document.getElementById('modalBody');
         modalBody.innerHTML = `
             <h3 class="text-lg font-bold text-slate-800 mb-2">${title}</h3>
@@ -268,6 +308,7 @@
     }
 
     function showLoginModal() {
+        document.getElementById('modalContent').className = 'bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto';
         const modalBody = document.getElementById('modalBody');
         modalBody.innerHTML = `
             <h3 class="text-lg font-bold text-slate-800 mb-4">เข้าสู่ระบบ / สมัครสมาชิก</h3>
@@ -300,8 +341,9 @@
         document.getElementById('signUpBtn').addEventListener('click', handleSignUp);
         document.getElementById('googleSignInBtn').addEventListener('click', handleGoogleSignIn);
     }
-
+    
     window.showItemDetailsModal = function(index) {
+        document.getElementById('modalContent').className = 'bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto';
         const item = quoteItems[index];
         if (!item) return;
         const modalBody = document.getElementById('modalBody');
@@ -377,42 +419,109 @@
         document.getElementById('appModal').classList.remove('hidden');
         lucide.createIcons();
     }
+    
+    /* ===== CUSTOMER MANAGEMENT ===== */
+    function listenForCustomers() {
+        if (!db || !userId) return;
+        const collectionPath = `users/${userId}/customers`;
+        const q = query(collection(db, collectionPath), orderBy("name"));
+        onSnapshot(q, (querySnapshot) => {
+            allCustomers = [];
+            querySnapshot.forEach((doc) => {
+                allCustomers.push({ id: doc.id, ...doc.data() });
+            });
+        });
+    }
 
-    window.saveItemSettingsFromModal = function(index) {
-        const item = quoteItems[index];
-        if (!item) return;
+    function showCustomerModal() {
+        document.getElementById('modalContent').className = 'bg-white rounded-lg shadow-xl p-0 w-full max-w-2xl relative max-h-[90vh] flex flex-col';
+        const modalBody = document.getElementById('modalBody');
+        modalBody.innerHTML = `
+            <div class="p-4 border-b">
+                 <h3 class="text-lg font-bold text-slate-800">จัดการข้อมูลลูกค้า</h3>
+            </div>
+            <div class="p-4 flex-grow overflow-y-auto">
+                <input type="text" id="customerSearchModal" class="w-full px-3 py-1.5 border border-slate-300 rounded-md shadow-sm text-sm mb-4" placeholder="ค้นหาลูกค้า...">
+                <div id="customerList" class="space-y-2 max-h-[40vh] overflow-y-auto"></div>
+                <details class="mt-4 border-t pt-4">
+                    <summary class="text-sm font-semibold text-slate-700 cursor-pointer">เพิ่มลูกค้าใหม่</summary>
+                    <div class="mt-4 space-y-3 bg-slate-50 p-3 rounded-md">
+                        <input type="text" id="newCustomerName" class="w-full px-3 py-1.5 border rounded text-sm" placeholder="ชื่อลูกค้า/บริษัท">
+                        <input type="text" id="newCustomerPhone" class="w-full px-3 py-1.5 border rounded text-sm" placeholder="เบอร์โทร">
+                        <textarea id="newCustomerAddress" rows="2" class="w-full px-3 py-1.5 border rounded text-sm" placeholder="ที่อยู่"></textarea>
+                        <button id="saveNewCustomerBtn" class="w-full px-3 py-1.5 bg-green-600 text-white rounded font-semibold text-sm">บันทึกลูกค้าใหม่</button>
+                    </div>
+                </details>
+            </div>
+        `;
+        document.getElementById('appModal').classList.remove('hidden');
+        lucide.createIcons();
 
-        const newRules = { minOrderMultiplier: 0, profitShareTiers: [] };
-        const newMultiplier = parseInt(document.getElementById('modalMinOrderMultiplier').value, 10);
-        if (!isNaN(newMultiplier) && newMultiplier > 0) {
-            newRules.minOrderMultiplier = newMultiplier;
+        renderCustomerList();
+
+        document.getElementById('customerSearchModal').addEventListener('input', renderCustomerList);
+        document.getElementById('saveNewCustomerBtn').addEventListener('click', saveNewCustomer);
+    }
+
+    function renderCustomerList() {
+        const listEl = document.getElementById('customerList');
+        const searchTerm = document.getElementById('customerSearchModal').value.toLowerCase();
+        
+        const filtered = allCustomers.filter(c => c.name.toLowerCase().includes(searchTerm));
+
+        if (filtered.length === 0) {
+            listEl.innerHTML = `<div class="text-center text-sm text-slate-400 p-4">ไม่พบข้อมูลลูกค้า</div>`;
+            return;
         }
 
-        const newTiers = [];
-        document.querySelectorAll('#modalProfitShareTiersContainer .tier-row').forEach(row => {
-            const min_qty = parseInt(row.querySelector('.tier-qty').value, 10);
-            const share_pct = parseInt(row.querySelector('.tier-pct').value, 10);
-            if (!isNaN(min_qty) && !isNaN(share_pct) && min_qty > 0 && share_pct >= 0 && share_pct <= 100) {
-                newTiers.push({ min_qty, share_pct });
-            }
+        listEl.innerHTML = filtered.map(customer => `
+            <div class="p-2 border rounded-md flex justify-between items-center hover:bg-slate-50">
+                <div>
+                    <p class="font-semibold text-sm">${customer.name}</p>
+                    <p class="text-xs text-slate-500">${customer.phone || ''}</p>
+                </div>
+                <button class="select-customer-btn px-2 py-1 bg-blue-600 text-white text-xs rounded" data-id="${customer.id}">เลือก</button>
+            </div>
+        `).join('');
+
+        listEl.querySelectorAll('.select-customer-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const customerId = e.target.dataset.id;
+                const customer = allCustomers.find(c => c.id === customerId);
+                if (customer) {
+                    document.getElementById('customerName').value = customer.name;
+                    document.getElementById('customerPhone').value = customer.phone || '';
+                    document.getElementById('customerAddress').value = customer.address || '';
+                    selectedCustomerId = customer.id;
+                }
+                closeModal();
+            });
         });
-        newTiers.sort((a, b) => b.min_qty - a.min_qty);
-        newRules.profitShareTiers = newTiers;
-
-        item.rules = newRules;
-        updateQuoteItem(index, item.quantity);
-        closeModal();
     }
 
-    window.resetItemSettings = function(index) {
-        const item = quoteItems[index];
-        if (!item) return;
-        item.rules = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-        updateQuoteItem(index, item.quantity);
-        closeModal();
-    }
+    async function saveNewCustomer() {
+        const name = document.getElementById('newCustomerName').value.trim();
+        if (!name) { alert('กรุณาระบุชื่อลูกค้า'); return; }
 
-    /* ===== COMPANY INFO SETTINGS ===== */
+        const customerData = {
+            name: name,
+            phone: document.getElementById('newCustomerPhone').value.trim(),
+            address: document.getElementById('newCustomerAddress').value.trim(),
+        };
+
+        try {
+            const collectionPath = `users/${userId}/customers`;
+            await addDoc(collection(db, collectionPath), customerData);
+            document.getElementById('newCustomerName').value = '';
+            document.getElementById('newCustomerPhone').value = '';
+            document.getElementById('newCustomerAddress').value = '';
+        } catch (error) {
+            console.error("Error saving new customer: ", error);
+            alert('ไม่สามารถบันทึกลูกค้าใหม่ได้');
+        }
+    }
+    
+    /* ===== COMPANY INFO SETTINGS & INVENTORY (UNCHANGED) ===== */
     function loadCompanyInfo() {
         const savedInfo = localStorage.getItem(COMPANY_INFO_KEY);
         companyInfo = savedInfo ? JSON.parse(savedInfo) : {
@@ -433,6 +542,7 @@
         showInfoModal('สำเร็จ', 'บันทึกข้อมูลบริษัทเรียบร้อยแล้ว');
     }
     function showSettingsModal() {
+        document.getElementById('modalContent').className = 'bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto';
         const modalBody = document.getElementById('modalBody');
         modalBody.innerHTML = `
             <h3 class="text-lg font-bold text-slate-800 mb-4">ตั้งค่าข้อมูลบริษัทและใบเสนอราคา</h3>
@@ -483,9 +593,6 @@
         
         document.getElementById('appModal').classList.remove('hidden');
     }
-
-
-    /* ===== INVENTORY MANAGEMENT ===== */
     window.setInvStatus = function(t) { document.getElementById('invStatus').innerText = 'Inventory: ' + t; }
     function renderSyncStatus() {
         const syncTime = localStorage.getItem(INV_SYNC_TIME_KEY);
@@ -499,7 +606,6 @@
     ;(function initInventoryFromLocal() { try { const raw = localStorage.getItem(INV_KEY); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) { INVENTORY = arr; setInvStatus(`โหลดแล้ว ${INVENTORY.length.toLocaleString('th-TH')} รายการ`); } } } catch {} })();
     window.clearInventory = function() { INVENTORY = []; localStorage.removeItem(INV_KEY); localStorage.removeItem(INV_SYNC_TIME_KEY); setInvStatus('ยังไม่โหลด'); renderSyncStatus(); alert('ล้างข้อมูล Inventory แล้ว'); }
     function saveInventoryToLocal() { try { localStorage.setItem(INV_KEY, JSON.stringify(INVENTORY)); setInvStatus(`โหลดแล้ว ${INVENTORY.length.toLocaleString('th-TH')} รายการ`);} catch { setInvStatus('บันทึกไม่สำเร็จ (พื้นที่เต็ม)'); } }
-    
     window.syncInventory = async function(auto = false) {
         try {
             setInvStatus('กำลังซิงก์...');
@@ -565,10 +671,7 @@
             if (!auto) alert('ซิงก์ Inventory ไม่สำเร็จ:\n' + err.message);
         }
     }
-
     function parseCSV(text) { const rows = []; let i = 0, cur = '', row = [], inq = false; while (i < text.length) { const ch = text[i]; if (inq) { if (ch == '"') { if (text[i + 1] == '"') { cur += '"'; i++; } else inq = false; } else cur += ch; } else { if (ch == '"') inq = true; else if (ch == ',') { row.push(cur); cur = ''; } else if (ch == '\r') { } else if (ch == '\n') { row.push(cur); rows.push(row); row = []; cur = ''; } else cur += ch; } i++; } row.push(cur); rows.push(row); return rows.filter(r => r.length && r.some(x => (x || '').toString().trim() != '')); }
-
-    /* ===== AUTOCOMPLETE ===== */
     const AC = { portal: document.getElementById('acPortal'), input: null, items: [], active: -1 };
     function closeAC() { AC.portal.innerHTML = ''; AC.input = null; AC.items = []; AC.active = -1; }
     function highlight(t, q) { if (!q) return t; const re = new RegExp(escapeReg(q), 'ig'); return t.replace(re, m => `<span class="hl">${m}</span>`); }
@@ -610,7 +713,6 @@
             proceedAction();
         }
     }
-
     function updateQuoteItem(index, newQuantity) {
         const item = quoteItems[index];
         if (!item) return;
@@ -642,7 +744,6 @@
             performUpdate();
         }
     }
-
     function togglePriceMode(index) {
         const item = quoteItems[index];
         if (!item) return;
@@ -664,9 +765,7 @@
         }
         renderQuoteTable();
     }
-
     function removeQuoteItem(index) { quoteItems.splice(index, 1); renderQuoteTable(); }
-    
     function renderQuoteTable() {
         const tableBody = document.getElementById('quoteTableBody');
         const summaryDiv = document.getElementById('quoteSummary');
@@ -692,14 +791,17 @@
                 quantityCellHtml += `<span class="ml-1" title="สินค้าในสต็อกไม่พอ (มี ${item.availableStock} ชิ้น)"><i data-lucide="alert-triangle" class="w-4 h-4 text-orange-500 inline-block"></i></span>`;
             }
 
-
             tr.innerHTML = `
                 <td class="px-2 py-2 text-slate-700">${item.product.name || item.product.sku}</td>
-                <td class="px-2 py-2 text-center">
-                    <label class="toggle-switch">
-                        <input type="checkbox" class="price-mode-toggle" data-index="${index}" ${item.priceMode === 'wholesale' ? 'checked' : ''}>
-                        <span class="slider"></span>
-                    </label>
+                <td class="px-2 py-2">
+                    <div class="flex items-center justify-center gap-1.5 text-xs text-slate-500 whitespace-nowrap">
+                        <span class="${item.priceMode !== 'wholesale' ? 'font-semibold text-slate-700' : ''}">ปลีก</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" class="price-mode-toggle" data-index="${index}" ${item.priceMode === 'wholesale' ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                        <span class="${item.priceMode === 'wholesale' ? 'font-semibold text-slate-700' : ''}">ส่ง</span>
+                    </div>
                 </td>
                 <td class="px-2 py-2 flex items-center justify-center">${quantityCellHtml}</td>
                 <td class="px-2 py-2 text-right">${pricePerUnitHtml}</td>
@@ -741,13 +843,23 @@
     function clearQuote() { 
         quoteItems = []; 
         currentQuoteId = null;
+        selectedCustomerId = null;
         document.getElementById('customerName').value = ''; 
         document.getElementById('customerPhone').value = ''; 
         document.getElementById('customerAddress').value = ''; 
+        document.getElementById('saveCustomerInfo').checked = false;
         renderQuoteTable(); 
     }
     function printQuote() {
         if (quoteItems.length === 0) { showInfoModal('ผิดพลาด', "ไม่มีรายการในใบเสนอราคา"); return; }
+        const printContent = getPrintableHtml();
+        const win = window.open('', '_blank'); 
+        win.document.write(printContent); 
+        win.document.close(); 
+        win.focus(); 
+        setTimeout(() => win.print(), 500);
+    }
+    function getPrintableHtml() {
         const includeVat = document.getElementById('includeVatToggle').checked;
         const customerName = document.getElementById('customerName').value || 'ลูกค้าเงินสด';
         const customerPhone = document.getElementById('customerPhone').value;
@@ -761,7 +873,7 @@
         const totalDiscount = totalRetail - subTotal;
         let summaryTableHtml; let footerNotesHtml;
         if (includeVat) { const vat = subTotal * 0.07; const grandTotal = subTotal + vat; summaryTableHtml = `<tr> <td>ยอดรวมราคาปกติ</td> <td class="text-right">${n2(totalRetail)} บาท</td> </tr> <tr class="highlight"> <td>ส่วนลดพิเศษ</td> <td class="text-right">- ${n2(totalDiscount)} บาท</td> </tr> <tr> <td>ยอดหลังหักส่วนลด</td> <td class="text-right">${n2(subTotal)} บาท</td> </tr> <tr> <td>ภาษีมูลค่าเพิ่ม 7%</td> <td class="text-right">${n2(vat)} บาท</td> </tr> <tr class="grand-total"> <td><strong>ยอดชำระสุทธิ:</strong></td> <td class="text-right"><strong>${n2(grandTotal)} บาท</strong></td> </tr>`; footerNotesHtml = `<li>ราคาดังกล่าว<u>รวม</u>ภาษีมูลค่าเพิ่ม 7% แล้ว</li>`; } else { summaryTableHtml = `<tr> <td>ยอดรวมราคาปกติ</td> <td class="text-right">${n2(totalRetail)} บาท</td> </tr> <tr class="highlight"> <td>ส่วนลดพิเศษ</td> <td class="text-right">- ${n2(totalDiscount)} บาท</td> </tr> <tr class="grand-total"> <td><strong>ยอดชำระสุทธิ:</strong></td> <td class="text-right"><strong>${n2(subTotal)} บาท</strong></td> </tr>`; footerNotesHtml = `<li>ราคาดังกล่าว<u>ยังไม่รวม</u>ภาษีมูลค่าเพิ่ม 7%</li>`; }
-        const printHtml = `
+        return `
             <html><head><title>ใบเสนอราคา - ${quoteNumber}</title>
             <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
             <style> 
@@ -802,7 +914,7 @@
                 } 
             </style>
             </head><body>
-                <div class="a4-container">
+                <div class="a4-container" id="pdf-content">
                     <div class="header"> 
                         <div class="company-info"> 
                             ${companyInfo.logoDataUrl ? `<img src="${companyInfo.logoDataUrl}" class="logo" alt="logo">` : ''}
@@ -828,10 +940,60 @@
                 </div>
             </body></html>
         `;
-        const win = window.open('', '_blank'); win.document.write(printHtml); win.document.close(); win.focus(); setTimeout(() => win.print(), 500);
     }
-    
-    /* ===== CORE CALCULATION LOGIC ===== */
+    async function generatePDF() {
+        if (quoteItems.length === 0) {
+            showInfoModal('ผิดพลาด', "ไม่มีรายการในใบเสนอราคาสำหรับสร้าง PDF");
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const pdfButton = document.getElementById('generatePdfBtn');
+        pdfButton.disabled = true;
+        pdfButton.innerHTML = `<span class="spinner"></span> สร้าง PDF...`;
+        lucide.createIcons();
+
+        const printableContent = getPrintableHtml();
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.innerHTML = printableContent;
+        document.body.appendChild(tempContainer);
+        
+        const contentToCapture = tempContainer.querySelector('.a4-container');
+        
+        try {
+            const canvas = await html2canvas(contentToCapture, {
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+            const imgData = canvas.toDataURL('image/png');
+            
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            
+            const quoteNumber = currentQuoteId ? `QT-${currentQuoteId.slice(-6)}` : `QT-${Date.now().toString().slice(-6)}`;
+            pdf.save(`ใบเสนอราคา-${quoteNumber}.pdf`);
+
+        } catch (error) {
+            console.error("PDF Generation Error:", error);
+            showInfoModal('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างไฟล์ PDF ได้');
+        } finally {
+            document.body.removeChild(tempContainer);
+            pdfButton.disabled = false;
+            pdfButton.innerHTML = `<i data-lucide="file-text" class="w-4 h-4 mr-2"></i>สร้าง PDF`;
+            lucide.createIcons();
+        }
+    }
     function getWholesalePrice(product, quantity, rules) {
         const { retail_price, cost, stock } = product;
         const retailPriceNum = parseFloat(retail_price);
@@ -876,7 +1038,6 @@
             errorDiv.classList.remove('hidden');
         }
     }
-    
     async function handleSignUp() {
         const email = document.getElementById('authEmail').value;
         const password = document.getElementById('authPassword').value;
@@ -889,7 +1050,6 @@
             errorDiv.classList.remove('hidden');
         }
     }
-
     async function handleSignIn() {
         const email = document.getElementById('authEmail').value;
         const password = document.getElementById('authPassword').value;
@@ -902,7 +1062,6 @@
             errorDiv.classList.remove('hidden');
         }
     }
-
     async function handleSignOut() {
         try {
             await signOut(auth);
@@ -913,9 +1072,7 @@
             console.error("Sign out error", error);
         }
     }
-
     async function initFirebase() {
-        // --- NEW FIREBASE CONFIG ---
         const firebaseConfig = {
           apiKey: "AIzaSyAJuHmFccuuzBemjOT_S6uWUKLJuLD5mWE",
           authDomain: "quote-gen-v2.firebaseapp.com",
@@ -951,6 +1108,7 @@
                 userInfoDiv.classList.add('flex');
 
                 listenForHistory();
+                listenForCustomers();
             } else {
                 userId = null;
                 document.getElementById('userEmailDisplay').textContent = '';
@@ -966,7 +1124,6 @@
             }
         });
     }
-
     async function saveQuote() {
         if (!userId || !db) {
             showInfoModal('ผิดพลาด', 'ยังไม่ได้เชื่อมต่อกับฐานข้อมูล'); return;
@@ -979,69 +1136,134 @@
         saveBtn.disabled = true;
         saveBtn.innerHTML = `<span class="spinner"></span> กำลังบันทึก...`;
 
-        const customerData = {
-            name: document.getElementById('customerName').value,
-            phone: document.getElementById('customerPhone').value,
-            address: document.getElementById('customerAddress').value
-        };
-
-        const summary = calculateSummary();
-        const quoteData = {
-            customer: customerData,
-            items: quoteItems.map(item => ({...item, product: {name: item.product.name, sku: item.product.sku, cost: item.product.cost, retail_price: item.product.retail_price, stock: item.product.stock}})),
-            summary: summary,
-            includeVat: document.getElementById('includeVatToggle').checked,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            createdBy: userId
-        };
+        const shouldSaveCustomer = document.getElementById('saveCustomerInfo').checked;
+        const customerName = document.getElementById('customerName').value.trim();
 
         try {
+            if (shouldSaveCustomer && customerName) {
+                const customerData = {
+                    name: customerName,
+                    phone: document.getElementById('customerPhone').value.trim(),
+                    address: document.getElementById('customerAddress').value.trim(),
+                };
+                const customersRef = collection(db, `users/${userId}/customers`);
+                const q = query(customersRef, where("name", "==", customerName));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const customerDoc = querySnapshot.docs[0];
+                    selectedCustomerId = customerDoc.id;
+                    await setDoc(doc(db, `users/${userId}/customers`, selectedCustomerId), customerData);
+                } else {
+                    const docRef = await addDoc(customersRef, customerData);
+                    selectedCustomerId = docRef.id;
+                }
+            }
+            
+            const customerDataForQuote = {
+                name: document.getElementById('customerName').value,
+                phone: document.getElementById('customerPhone').value,
+                address: document.getElementById('customerAddress').value
+            };
+
+            const summary = calculateSummary();
+            const quoteData = {
+                customer: customerDataForQuote,
+                items: quoteItems.map(item => ({...item, product: {name: item.product.name, sku: item.product.sku, cost: item.product.cost, retail_price: item.product.retail_price, stock: item.product.stock}})),
+                summary: summary,
+                includeVat: document.getElementById('includeVatToggle').checked,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                createdBy: userId
+            };
+            
             const collectionPath = `users/${userId}/quotations`;
+            let successMessage = '';
+            let quoteIdForMessage = '';
+
             if (currentQuoteId) {
                 const docRef = doc(db, collectionPath, currentQuoteId);
                 await setDoc(docRef, {...quoteData, updatedAt: serverTimestamp()}, { merge: true });
-                showInfoModal(
-                    'อัปเดตสำเร็จ',
-                    `อัปเดตใบเสนอราคา ${currentQuoteId.slice(-6)} เรียบร้อยแล้ว`,
-                    clearQuote
-                );
+                successMessage = `อัปเดตใบเสนอราคาเรียบร้อยแล้ว`;
+                quoteIdForMessage = currentQuoteId;
             } else {
                 const docRef = await addDoc(collection(db, collectionPath), quoteData);
                 currentQuoteId = docRef.id;
-                 showInfoModal(
-                    'บันทึกสำเร็จ',
-                    `บันทึกใบเสนอราคาใหม่เรียบร้อยแล้ว (ID: ${docRef.id.slice(-6)})`,
-                    clearQuote
-                );
+                quoteIdForMessage = docRef.id;
+                successMessage = `บันทึกใบเสนอราคาใหม่เรียบร้อยแล้ว`;
             }
+
+            showInfoModal(
+                'บันทึกสำเร็จ',
+                `${successMessage} (ID: ${quoteIdForMessage.slice(-6)})`,
+                () => {
+                    clearQuote();
+                    saveBtn.innerHTML = `<i data-lucide="check" class="w-4 h-4 mr-2"></i>บันทึกแล้ว`;
+                    saveBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                    saveBtn.classList.add('bg-green-600', 'cursor-not-allowed');
+                    lucide.createIcons();
+                    
+                    setTimeout(() => {
+                        saveBtn.innerHTML = `<i data-lucide="save" class="w-4 h-4 mr-2"></i>บันทึก`;
+                        saveBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                        saveBtn.classList.remove('bg-green-600', 'cursor-not-allowed');
+                        lucide.createIcons();
+                    }, 2500);
+                }
+            );
+            document.getElementById('saveCustomerInfo').checked = false;
+
         } catch (error) {
             console.error("Error saving document: ", error);
             showInfoModal('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message);
         } finally {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = `<i data-lucide="save" class="w-4 h-4 mr-2"></i>บันทึก`;
-            lucide.createIcons();
+             if (!saveBtn.classList.contains('bg-green-600')) {
+                saveBtn.innerHTML = `<i data-lucide="save" class="w-4 h-4 mr-2"></i>บันทึก`;
+                lucide.createIcons();
+            }
         }
     }
-    
+    function listenForHistory() {
+        if (!db || !userId) return;
+        const historyList = document.getElementById('historyList');
+        const skeleton = document.getElementById('historySkeleton');
+        skeleton.classList.remove('hidden');
+        
+        const collectionPath = `users/${userId}/quotations`;
+        const q = query(collection(db, collectionPath), orderBy("createdAt", "desc"));
+
+        onSnapshot(q, (querySnapshot) => {
+            skeleton.classList.add('hidden');
+            allHistoryQuotes = [];
+            querySnapshot.forEach((doc) => {
+                allHistoryQuotes.push({ id: doc.id, quote: doc.data() });
+            });
+            renderHistoryList();
+        }, (error) => {
+            console.error("Error listening to history: ", error);
+            skeleton.classList.add('hidden');
+            historyList.innerHTML = `<div class="text-center text-red-500 py-8">ไม่สามารถโหลดประวัติได้</div>`;
+        });
+    }
     function renderHistoryList() {
         const historyList = document.getElementById('historyList');
         const searchQuery = document.getElementById('historySearch').value.toLowerCase().trim();
-
-        if (allHistoryQuotes.length === 0) {
-            if (auth.currentUser) {
-                 historyList.innerHTML = `<div class="text-center text-slate-400 py-8">ยังไม่มีประวัติ</div>`;
-            }
+        
+        if (!auth.currentUser) {
+            historyList.innerHTML = `<div class="text-center text-slate-400 py-8">กรุณาเข้าสู่ระบบเพื่อดูประวัติ</div>`;
             return;
         }
 
         const filteredQuotes = searchQuery ? allHistoryQuotes.filter(quoteData => {
             return quoteData.quote.items.some(item => 
                 item.product.name && item.product.name.toLowerCase().includes(searchQuery)
-            );
+            ) || (quoteData.quote.customer?.name && quoteData.quote.customer.name.toLowerCase().includes(searchQuery));
         }) : allHistoryQuotes;
 
+        if (allHistoryQuotes.length === 0) {
+            historyList.innerHTML = `<div class="text-center text-slate-400 py-8">ยังไม่มีประวัติ</div>`;
+            return;
+        }
         if (filteredQuotes.length === 0) {
             historyList.innerHTML = `<div class="text-center text-slate-400 py-8">ไม่พบผลลัพธ์สำหรับ "${searchQuery}"</div>`;
             return;
@@ -1060,32 +1282,24 @@
                         <p class="font-semibold text-sm text-slate-800">${quote.customer?.name || 'ลูกค้าเงินสด'}</p>
                         <p class="text-xs text-slate-500">ID: ${id.slice(-6)} • ${date}</p>
                     </div>
-                    <div class="font-bold text-sm text-blue-600">${n2(total)}</div>
+                    <div class="flex items-center gap-3">
+                        <div class="font-bold text-sm text-blue-600">${n2(total)}</div>
+                        <button class="duplicate-quote-btn text-slate-400 hover:text-blue-600" title="ทำซ้ำใบเสนอราคานี้" data-quote-id="${id}">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </div>
             `;
-            historyItem.onclick = () => loadQuote(id);
+            historyItem.querySelector('.duplicate-quote-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const quoteId = e.currentTarget.dataset.quoteId;
+                duplicateQuote(quoteId);
+            });
+            historyItem.addEventListener('click', () => loadQuote(id));
             historyList.appendChild(historyItem);
         });
+        lucide.createIcons();
     }
-
-    function listenForHistory() {
-        if (!db || !userId) return;
-        const historyList = document.getElementById('historyList');
-        const collectionPath = `users/${userId}/quotations`;
-        const q = query(collection(db, collectionPath), orderBy("createdAt", "desc"));
-
-        onSnapshot(q, (querySnapshot) => {
-            allHistoryQuotes = [];
-            querySnapshot.forEach((doc) => {
-                allHistoryQuotes.push({ id: doc.id, quote: doc.data() });
-            });
-            renderHistoryList();
-        }, (error) => {
-            console.error("Error listening to history: ", error);
-            historyList.innerHTML = `<div class="text-center text-red-500 py-8">ไม่สามารถโหลดประวัติได้</div>`;
-        });
-    }
-
     async function loadQuote(quoteId) {
         if (!db || !userId) return;
         try {
@@ -1113,7 +1327,32 @@
             showInfoModal('ผิดพลาด', "เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message);
         }
     }
-
+    async function duplicateQuote(quoteId) {
+        if (!db || !userId) return;
+        try {
+            const quoteData = allHistoryQuotes.find(q => q.id === quoteId)?.quote;
+            if (quoteData) {
+                currentQuoteId = null; 
+                selectedCustomerId = null; 
+                
+                document.getElementById('customerName').value = quoteData.customer?.name || '';
+                document.getElementById('customerPhone').value = quoteData.customer?.phone || '';
+                document.getElementById('customerAddress').value = quoteData.customer?.address || '';
+                document.getElementById('includeVatToggle').checked = quoteData.includeVat || false;
+                
+                quoteItems = quoteData.items;
+                renderQuoteTable();
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                showInfoModal('คัดลอกสำเร็จ', 'ข้อมูลจากใบเสนอราคาเก่าถูกโหลดเรียบร้อยแล้ว<br>คุณสามารถแก้ไขและบันทึกเป็นใบใหม่ได้เลย');
+            } else {
+                 showInfoModal('ผิดพลาด', "ไม่พบข้อมูลใบเสนอราคาที่จะคัดลอก");
+            }
+        } catch(error) {
+            console.error("Error duplicating quote: ", error);
+            showInfoModal('ผิดพลาด', "เกิดข้อผิดพลาดในการคัดลอกข้อมูล: " + error.message);
+        }
+    }
     function calculateSummary() {
         let subTotal = 0, totalRetail = 0;
         quoteItems.forEach(item => {
@@ -1131,7 +1370,6 @@
         }
         return summary;
     }
-
 
     /* ===== INITIALIZATION AND EVENT BINDING ===== */
     function bindEventListeners() { 
@@ -1195,6 +1433,8 @@
         document.getElementById('loginBtn').addEventListener('click', showLoginModal);
         document.getElementById('logoutBtn').addEventListener('click', handleSignOut);
         document.getElementById('promptLoginBtn').addEventListener('click', showLoginModal);
+        document.getElementById('generatePdfBtn').addEventListener('click', generatePDF);
+        document.getElementById('selectCustomerBtn').addEventListener('click', showCustomerModal);
     }
     
     function initApp() { 
@@ -1213,3 +1453,4 @@
 </script>
 </body>
 </html>
+
