@@ -54,6 +54,7 @@
         </div>
     </header>
 
+    <!-- Login Prompt Container -->
     <div id="loginPromptContainer" class="text-center py-20 bg-white rounded-lg shadow-md hidden">
         <h2 class="text-2xl font-bold text-slate-800">กรุณาเข้าสู่ระบบ</h2>
         <p class="text-slate-500 mt-2">คุณต้องเข้าสู่ระบบเพื่อใช้งานเครื่องมือสร้างใบเสนอราคา</p>
@@ -62,7 +63,9 @@
         </button>
     </div>
 
+    <!-- Main App Container -->
     <div id="mainAppContainer" class="space-y-6 hidden">
+        <!-- Quotation Card -->
         <div id="quotationCard" class="bg-white p-5 rounded-lg shadow-md">
              <h2 class="text-base font-bold text-slate-700 border-b pb-3 mb-4">ใบเสนอราคา</h2>
              
@@ -158,6 +161,7 @@
             <div id="invSyncTime" class="text-xs text-slate-400 text-center border-t mt-3 pt-3"></div>
         </div>
 
+        <!-- History Card -->
         <div class="bg-white p-5 rounded-lg shadow-md">
             <div class="flex justify-between items-center border-b pb-3 mb-4">
                 <h2 class="text-base font-bold text-slate-700">ประวัติใบเสนอราคา</h2>
@@ -170,6 +174,7 @@
     </div>
 </div>
 
+<!-- MODAL & Autocomplete Portal -->
 <div id="appModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600">
@@ -910,14 +915,16 @@
     }
 
     async function initFirebase() {
+        // --- NEW FIREBASE CONFIG ---
         const firebaseConfig = {
-          apiKey: "AIzaSyALTTyFlMIONAENrHWHUvdajFdXZ4gifKw",
-          authDomain: "quote-generator-d84d9.firebaseapp.com",
-          projectId: "quote-generator-d84d9",
-          storageBucket: "quote-generator-d84d9.firebasestorage.app",
-          messagingSenderId: "264408396056",
-          appId: "1:264408396056:web:836ab99500bf18c6306e6d"
+          apiKey: "AIzaSyAJuHmFccuuzBemjOT_S6uWUKLJuLD5mWE",
+          authDomain: "quote-gen-v2.firebaseapp.com",
+          projectId: "quote-gen-v2",
+          storageBucket: "quote-gen-v2.firebasestorage.app",
+          messagingSenderId: "394268537935",
+          appId: "1:394268537935:web:955954422ba1b19947263a"
         };
+        
         const finalConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
         
         app = initializeApp(finalConfig);
