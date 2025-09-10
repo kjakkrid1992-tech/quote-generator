@@ -164,7 +164,7 @@
                 <input type="text" id="historySearch" class="px-3 py-1.5 border border-slate-300 rounded-md shadow-sm text-sm" placeholder="ค้นหาสินค้าในประวัติ...">
             </div>
             <div id="historyList" class="space-y-3 max-h-[60vh] overflow-y-auto">
-                <div class="text-center text-slate-400 py-8">กรุณาเข้าสู่ระบบเพื่อดูประวัติ</div>
+                <div class="text-center text-slate-400 py-8">...</div>
             </div>
         </div>
     </div>
@@ -184,7 +184,7 @@
     // Firebase Imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, getDoc, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
     /* ===== CONFIG / STATE ===== */
     const INV_KEY = 'inventoryDataV1';
@@ -205,7 +205,7 @@
     let allHistoryQuotes = [];
 
     // Firebase state
-    let app, db, auth, userId, appId;
+    let app, db, auth, userId;
 
     /* ===== UTILITIES ===== */
     function n2(num, fix = 2) { if (isNaN(num) || num === null || num === undefined || num === '' || num === '-') return '-'; return (+num).toLocaleString('th-TH', { minimumFractionDigits: fix, maximumFractionDigits: fix }); }
@@ -910,8 +910,6 @@
     }
 
     async function initFirebase() {
-        appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id-ws-quote';
-        
         const firebaseConfig = {
           apiKey: "AIzaSyALTTyFlMIONAENrHWHUvdajFdXZ4gifKw",
           authDomain: "quote-generator-d84d9.firebaseapp.com",
@@ -934,12 +932,10 @@
             const loginPromptContainer = document.getElementById('loginPromptContainer');
             
             if (user) {
-                // User is signed in
                 userId = user.uid;
                 document.getElementById('userEmailDisplay').textContent = user.email;
                 saveBtn.disabled = false;
                 
-                // Show main app, hide login prompt
                 mainAppContainer.classList.remove('hidden');
                 loginPromptContainer.classList.add('hidden');
 
@@ -949,12 +945,10 @@
 
                 listenForHistory();
             } else {
-                // User is signed out
                 userId = null;
                 document.getElementById('userEmailDisplay').textContent = '';
                 saveBtn.disabled = true;
                 
-                // Hide main app, show login prompt
                 mainAppContainer.classList.add('hidden');
                 loginPromptContainer.classList.remove('hidden');
 
@@ -1191,7 +1185,6 @@
         document.getElementById('settingsBtn').addEventListener('click', showSettingsModal);
         document.getElementById('historySearch').addEventListener('input', renderHistoryList);
         
-        // Auth buttons
         document.getElementById('loginBtn').addEventListener('click', showLoginModal);
         document.getElementById('logoutBtn').addEventListener('click', handleSignOut);
         document.getElementById('promptLoginBtn').addEventListener('click', showLoginModal);
